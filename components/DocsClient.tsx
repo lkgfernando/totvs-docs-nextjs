@@ -159,7 +159,7 @@ export default function DocsClient({ userId }: Props) {
           <input
             type="text"
             placeholder="Buscar por título, URL ou descrição..."
-            className="input-field pl-9 pr-8"
+            className="input-field !pl-9 !pr-8"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -174,7 +174,7 @@ export default function DocsClient({ userId }: Props) {
         <div className="relative">
           <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <select
-            className="input-field pl-8 pr-8 appearance-none cursor-pointer"
+            className="input-field !pl-8 !pr-8 appearance-none cursor-pointer"
             value={category}
             onChange={e => setCategory(e.target.value)}
           >
@@ -187,7 +187,7 @@ export default function DocsClient({ userId }: Props) {
         <div className="relative">
           <SortAsc size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <select
-            className="input-field pl-8 pr-8 appearance-none cursor-pointer"
+            className="input-field !pl-8 !pr-8 appearance-none cursor-pointer"
             value={sort}
             onChange={e => setSort(e.target.value)}
           >
