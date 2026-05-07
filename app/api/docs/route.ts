@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { sql } from '@vercel/postgres'
+import { getDb } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -11,40 +11,37 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get('category') || ''
   const sort = searchParams.get('sort') || 'newest'
 
-  let rows
+  const sql = getDb()
+  const userId = session.user.id
+  let rows: any[]
 
   if (search && category) {
     const like = `%${search}%`
     rows = await sql`
       SELECT * FROM docs
-      WHERE user_id = ${session.user.id}
-        AND category = ${category}
+      WHERE user_id = ${userId} AND category = ${category}
         AND (title ILIKE ${like} OR url ILIKE ${like} OR description ILIKE ${like})
-      ORDER BY ${sort === 'oldest' ? sql`created_at ASC` : sort === 'az' ? sql`title ASC` : sql`created_at DESC`}
     `
   } else if (search) {
     const like = `%${search}%`
     rows = await sql`
       SELECT * FROM docs
-      WHERE user_id = ${session.user.id}
+      WHERE user_id = ${userId}
         AND (title ILIKE ${like} OR url ILIKE ${like} OR description ILIKE ${like})
-      ORDER BY ${sort === 'oldest' ? sql`created_at ASC` : sort === 'az' ? sql`title ASC` : sql`created_at DESC`}
     `
   } else if (category) {
-    rows = await sql`
-      SELECT * FROM docs
-      WHERE user_id = ${session.user.id} AND category = ${category}
-      ORDER BY ${sort === 'oldest' ? sql`created_at ASC` : sort === 'az' ? sql`title ASC` : sql`created_at DESC`}
-    `
+    rows = await sql`SELECT * FROM docs WHERE user_id = ${userId} AND category = ${category}`
   } else {
-    rows = await sql`
-      SELECT * FROM docs
-      WHERE user_id = ${session.user.id}
-      ORDER BY ${sort === 'oldest' ? sql`created_at ASC` : sort === 'az' ? sql`title ASC` : sql`created_at DESC`}
-    `
+    rows = await sql`SELECT * FROM docs WHERE user_id = ${userId}`
   }
 
-  return NextResponse.json(rows.rows)
+  rows.sort((a, b) => {
+    if (sort === 'az') return String(a.title).localeCompare(String(b.title))
+    if (sort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+
+  return NextResponse.json(rows)
 }
 
 export async function POST(req: NextRequest) {
@@ -57,11 +54,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Título e URL são obrigatórios.' }, { status: 400 })
   }
 
-  const result = await sql`
+  const sql = getDb()
+  const rows = await sql`
     INSERT INTO docs (user_id, title, url, description, category)
     VALUES (${session.user.id}, ${title}, ${url}, ${description || ''}, ${category || 'Outros'})
     RETURNING *
   `
 
-  return NextResponse.json(result.rows[0], { status: 201 })
+  return NextResponse.json(rows[0], { status: 201 })
 }

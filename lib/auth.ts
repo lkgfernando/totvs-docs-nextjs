@@ -1,9 +1,11 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
-import { sql } from '@vercel/postgres'
+import { neon } from '@neondatabase/serverless'
+import { authConfig } from './auth.config'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -13,37 +15,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const result = await sql`
-          SELECT * FROM users WHERE email = ${credentials.email as string}
-        `
-        const user = result.rows[0]
+        const sql = neon(process.env.DATABASE_URL!)
+        const rows = await sql`SELECT * FROM users WHERE email = ${credentials.email as string}`
+        const user = rows[0]
         if (!user) return null
 
-        const valid = await bcrypt.compare(credentials.password as string, user.password)
+        const valid = await bcrypt.compare(credentials.password as string, user.password as string)
         if (!valid) return null
 
-        return { id: String(user.id), name: user.name, email: user.email, role: user.role }
+        return { id: String(user.id), name: user.name as string, email: user.email as string, role: user.role as string }
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = (user as any).role
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
-        ;(session.user as any).role = token.role
-      }
-      return session
-    },
-  },
-  pages: {
-    signIn: '/login',
-  },
-  session: { strategy: 'jwt' },
 })

@@ -1,37 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { sql } from '@vercel/postgres'
+import { getDb } from '@/lib/db'
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
+  const { id } = await params
   const { title, url, description, category } = await req.json()
+  const sql = getDb()
 
-  const result = await sql`
+  const rows = await sql`
     UPDATE docs
     SET title = ${title}, url = ${url}, description = ${description || ''},
         category = ${category || 'Outros'}, updated_at = NOW()
-    WHERE id = ${params.id} AND user_id = ${session.user.id}
+    WHERE id = ${id} AND user_id = ${session.user.id}
     RETURNING *
   `
 
-  if (result.rows.length === 0) {
+  if (rows.length === 0) {
     return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
   }
 
-  return NextResponse.json(result.rows[0])
+  return NextResponse.json(rows[0])
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
 
-  const result = await sql`
-    DELETE FROM docs WHERE id = ${params.id} AND user_id = ${session.user.id} RETURNING id
+  const { id } = await params
+  const sql = getDb()
+  const rows = await sql`
+    DELETE FROM docs WHERE id = ${id} AND user_id = ${session.user.id} RETURNING id
   `
 
-  if (result.rows.length === 0) {
+  if (rows.length === 0) {
     return NextResponse.json({ error: 'Não encontrado.' }, { status: 404 })
   }
 

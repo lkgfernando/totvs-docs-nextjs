@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { sql } from '@vercel/postgres'
+import { getDb } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,8 +10,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Todos os campos são obrigatórios.' }, { status: 400 })
     }
 
+    const sql = getDb()
     const existing = await sql`SELECT id FROM users WHERE email = ${email}`
-    if (existing.rows.length > 0) {
+    if (existing.length > 0) {
       return NextResponse.json({ error: 'Email já cadastrado.' }, { status: 409 })
     }
 
