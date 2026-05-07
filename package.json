@@ -10,7 +10,7 @@
     "db:migrate": "node lib/migrate.js"
   },
   "dependencies": {
-    "next": "latest",
+    "next": "15.5.8",
     "react": "^18",
     "react-dom": "^18",
     "next-auth": "^5.0.0-beta.25",
